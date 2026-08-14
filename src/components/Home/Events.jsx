@@ -29,10 +29,10 @@ const Events = () => {
 
   // Fetch all events with sorting
   const { data: events = [], isLoading: eventsLoading } = useQuery({
-    queryKey: ['events', sortBy], // ← This forces refetch when sortBy changes
+    queryKey: ['events', sortBy],
     queryFn: async () => {
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/events`, {
-        params: { sort: sortBy }, // ← This sends ?sort=newest etc.
+        params: { sort: sortBy },
       });
       return res.data;
     },
@@ -64,7 +64,7 @@ const Events = () => {
     },
   });
 
-  // Register mutation
+  // Register mutation — FREE events only (backend rejects paid events on this route)
   const registerMutation = useMutation({
     mutationFn: async (eventId) => {
       const token = await auth.currentUser.getIdToken();
@@ -80,6 +80,29 @@ const Events = () => {
     },
     onError: (err) => {
       toast.error(err.response?.data?.error || 'Registration failed');
+    },
+  });
+
+  // Checkout mutation — PAID events. Creates a Stripe session and redirects the browser to it.
+  const checkoutMutation = useMutation({
+    mutationFn: async (paymentInfo) => {
+      const token = await auth.currentUser.getIdToken();
+      const { data } = await axios.post(
+        `${import.meta.env.VITE_API_URL}/create-checkout-session`,
+        paymentInfo,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return data;
+    },
+    onSuccess: (data) => {
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error('Could not start checkout. Please try again.');
+      }
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.error || 'Checkout failed');
     },
   });
 
@@ -117,6 +140,25 @@ const Events = () => {
       toast.error('You are already registered for this event');
       return;
     }
+
+    // Paid events go through Stripe Checkout; free events register directly
+    if (event.isPaid) {
+      checkoutMutation.mutate({
+        type: 'event',
+        eventId: event._id,
+        name: event.title,
+        description: event.description,
+        price: event.eventFee,
+        image: event.image || '',
+        customer: {
+          email: user.email,
+          name: user.displayName,
+          image: user.photoURL || '',
+        },
+      });
+      return;
+    }
+
     registerMutation.mutate(event._id);
   };
 
@@ -325,7 +367,7 @@ const Events = () => {
 
                   <button
                     onClick={() => handleRegister(event)}
-                    disabled={isRegistered || isFull || registerMutation.isLoading}
+                    disabled={isRegistered || isFull || registerMutation.isLoading || checkoutMutation.isLoading}
                     className={`w-full py-3 rounded-xl font-bold text-sm transition-all shadow-sm flex items-center justify-center gap-2 ${
                       isRegistered
                         ? 'bg-green-50 text-green-600 border border-green-200 cursor-not-allowed'
@@ -334,12 +376,14 @@ const Events = () => {
                         : 'bg-lime-500 text-white hover:bg-lime-600 hover:shadow-lg active:scale-[0.98]'
                     }`}
                   >
-                    {registerMutation.isLoading ? (
+                    {registerMutation.isLoading || checkoutMutation.isLoading ? (
                       <Clock className="w-4 h-4 animate-spin" />
                     ) : isRegistered ? (
                       'You are in!'
                     ) : isFull ? (
                       'No Spots Available'
+                    ) : event.isPaid ? (
+                      `Pay $${event.eventFee} & Register`
                     ) : (
                       'Register Now'
                     )}

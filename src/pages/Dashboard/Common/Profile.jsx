@@ -9,7 +9,7 @@ const Profile = () => {
   const { user, resetPassword } = useAuth()
   const [role, isRoleLoading] = useRole()
   const [showUpdateModal, setShowUpdateModal] = useState(false)
-  const [resetStatus, setResetStatus] = useState('') // '', 'sending', 'sent', 'error'
+  const [resetStatus, setResetStatus] = useState('') 
 
   if (isRoleLoading) return <LoadingSpinner />
 
@@ -94,7 +94,7 @@ const Profile = () => {
               onClick={() => setShowUpdateModal(true)}
               className='flex-1 bg-lime-500 text-white py-3 rounded-xl font-bold text-sm transition-all hover:bg-lime-600 active:scale-95 shadow-md shadow-lime-200'
             >
-              Update Profile
+              Update Profile.
             </button>
             <button
               onClick={handleChangePassword}
