@@ -42,7 +42,6 @@ const ClubCard = ({ club, index }) => {
             <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
               <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm">
                 <Users size={16} className="mr-1.5" />
-                <span>{club.members || '0'} members</span>
               </div>
               <span className="text-blue-600 dark:text-blue-400 text-sm font-semibold inline-flex items-center gap-1 group-hover:underline">
                 View Details <ArrowRight size={14} />
